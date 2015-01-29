@@ -15,7 +15,7 @@ class Directory:
 
 
 def parse_args():
-    ap = argparse.ArgumentParser(description='Prints a list of source directories or files that will fill the destination directory with a minimum of leftover disk space.')
+    ap = argparse.ArgumentParser(description='Prints a list of source directories or files that will fill the destination volume with a minimum of leftover disk space.')
 
     ap.add_argument('destination', 
                     metavar='dest',
