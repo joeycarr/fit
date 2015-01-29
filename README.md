@@ -1,4 +1,4 @@
-# fiy
+# fit
 
 A command line tool to select files/directories to fill destination
 media completely.
