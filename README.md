@@ -1,4 +1,4 @@
-# fit
+# fiy
 
 A command line tool to select files/directories to fill destination
 media completely.
@@ -6,7 +6,7 @@ media completely.
 	usage: fit [-h] [-i n] [-q] dest src [src ...]
 	
 	Prints a list of source directories or files that will fill the destination
-	directory with a minimum of leftover disk space.
+	volume with a minimum of leftover disk space.
 	
 	positional arguments:
 	  dest                  The directory you're trying to fill.
