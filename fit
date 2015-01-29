@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+
+import argparse, os, re, subprocess, sys
+from random import shuffle
+
+class Directory:
+    def __init__(self, dirname):
+        if os.path.isdir(dirname):
+            self.dirname = dirname
+        else:
+            raise Exception('Not a directory: "{0}"'.format(dirname))
+
+    def __repr__(self):
+        return self.dirname
+
+
+def parse_args():
+    ap = argparse.ArgumentParser(description='Prints a list of source directories or files that will fill the destination directory with a minimum of leftover disk space.')
+
+    ap.add_argument('destination', 
+                    metavar='dest',
+                    type=Directory,
+                    nargs=1,
+                    help='The directory you\'re trying to fill.')
+    
+    ap.add_argument('sources', 
+                    metavar='src', 
+                    type=str,
+                    nargs='+',
+                    help='The directories or files you want to fit into the destination directory.')
+
+    ap.add_argument('-i', '--iterations', 
+                    metavar='n',
+                    type=int,
+                    default=2048,
+                    help='The number of times to attempt to improve the fit. Default is 2048.')
+
+    ap.add_argument('-q', '--quiet',
+                    action='store_true',
+                    help='Suppress message about the utilization of the target directory to the standard error.')
+
+    return ap.parse_args()
+
+def capacity(dir):
+    # The dir input is already sanitized by the Directory class.
+    df_cmd = "df -k '{0}' | tail -n 1 ".format(dir)
+    output = subprocess.check_output(df_cmd, shell=True)
+    split_output = re.split(r'\s+', output)
+    capacity = split_output[3]
+    return int(capacity)
+
+def size(node):
+    # sanitize the input by ensuring that it's a real OS pathname.
+    if not os.path.exists(node):
+        raise Exception("The file '{0}' doesn't exist.".format(node))
+    du_cmd = "du -sk '{0}' | cut -f 1".format(node)
+    size = subprocess.check_output(du_cmd, shell=True)
+    return int(size)
+
+def weight(sizes):
+    return sum( x[0] for x in sizes )
+
+def partition(target, pitems):
+    items = [ x for x in pitems if x[0] <= target ]
+    for n in range(len(items)):
+        if weight(items[n:]) <= target:
+            include = items[n:]
+            exclude = items[:n]
+            return include, exclude
+    return [], pitems
+
+def improve(target, pinclude, pexclude):
+    all = pinclude+pexclude
+    shuffle(all)
+    include, exclude = partition(target, all)
+    
+    if weight(include) > weight(pinclude):
+        include.sort()
+        exclude.sort()
+        return include, exclude
+    else:
+        return pinclude, pexclude
+
+def main():
+    args = parse_args()
+    dest_capacity = capacity(args.destination[0])
+    source_sizes = sorted(
+        (size(source), source) for source in args.sources )
+
+    include, exclude = partition(dest_capacity, source_sizes)
+
+    for _ in xrange(args.iterations):
+        include, exclude = improve(dest_capacity, include, exclude)
+
+    if not args.quiet:
+        utilization = 100.0 * (weight(include) / float(dest_capacity))
+        sys.stderr.write('%.2f%% utilized\n' % utilization)
+
+    print("\n".join( sorted(item[1] for item in include) ))
+        
+if __name__ == '__main__':
+    main()
